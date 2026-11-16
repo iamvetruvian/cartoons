@@ -13,6 +13,8 @@ Proven on **The Bridge That Fell for a Song**, a 67 s short about the 1831 Broug
 | `templates/bridge/` | The full source of the bridge short: world, characters, ink, lens blur, grade, story/camera |
 | `templates/audio/` | The synthesized sound: SFX, march music, the mix with ducking and loudness |
 | `templates/scripts/` | Stills, side-by-side sheets, shot merge and frame-by-frame QA helpers |
+| `templates/voice/` | Narration: local Kokoro TTS + Whisper word timings in 10 voices, setup + render scripts |
+| `templates/captions.tsx` | Hormozi captions (in every video unless opted out): page pop + traveling yellow highlight from words.json, max two lines |
 | `references/STYLE_BIBLE.md` | The script and visual formula measured from 20 reference shorts |
 | `references/reports/` | Seven measured reports: motion, depth, textures, characters, lighting, outlines, grade |
 | `references/frames/` | 38 full-size reference frames (540x960) to compare your frames against |
@@ -21,6 +23,7 @@ Proven on **The Bridge That Fell for a Song**, a 67 s short about the 1831 Broug
 ## Install
 1. Copy this folder to `~/.claude/skills/cartoon-3d-short/` (clone it there, or download the ZIP).
 2. You need [Remotion](https://www.remotion.dev/) with `@remotion/three`, plus Node, Python 3 and ffmpeg.
+3. `bash templates/voice/setup_voice.sh` once for the narration (local Kokoro voice + Whisper, GPU-accelerated on NVIDIA, ~3.5 GB with the GPU wheel).
 3. In Claude Code, say: *"Use the cartoon short skill and make a short about …"*.
 
 Claude then follows `SKILL.md`: topic and facts, then script, then voice, then the shot plan in `story.ts`, then stills, then renders. Agents check your frames against the reports and the frames, and you get the final 2K render and sound mix.

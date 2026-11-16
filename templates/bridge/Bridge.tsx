@@ -63,13 +63,13 @@ const Inner: React.FC<{ id: number; kit: Kit }> = ({ id, kit }) => {
   useEffect(() => () => fx.ink.dispose(), [fx]);
   const post = useMemo(() => (
     <EffectComposer multisampling={4}>
-      {on.ink ? <primitive object={fx.ink} dispose={null} /> : null}
-      {on.lens && on.pre ? <primitive object={fx.lens.pre} dispose={null} /> : null}
-      {on.lens ? <primitive object={fx.lens.main} dispose={null} /> : null}
-      {on.bloom ? <primitive object={fx.bloom} dispose={null} /> : null}
-      <primitive object={fx.tone} dispose={null} />
-      {on.grade ? <primitive object={fx.grade} dispose={null} /> : null}
-      {on.grain ? <primitive object={fx.grain} dispose={null} /> : null}
+      {on.ink ? <primitive object={fx.ink} /> : null}
+      {on.lens && on.pre ? <primitive object={fx.lens.pre} /> : null}
+      {on.lens ? <primitive object={fx.lens.main} /> : null}
+      {on.bloom ? <primitive object={fx.bloom} /> : null}
+      <primitive object={fx.tone} />
+      {on.grade ? <primitive object={fx.grade} /> : null}
+      {on.grain ? <primitive object={fx.grain} /> : null}
     </EffectComposer>
   ), [fx, on]);
   const cam = camera as THREE.PerspectiveCamera;
@@ -85,7 +85,7 @@ const Inner: React.FC<{ id: number; kit: Kit }> = ({ id, kit }) => {
   fx.grain.seed = f; // deterministic per frame
   return (
     <>
-      <primitive object={world.root} dispose={null} />
+      <primitive object={world.root} />
       {post}
     </>
   );

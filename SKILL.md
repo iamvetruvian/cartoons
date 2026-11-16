@@ -16,12 +16,14 @@ The style reference is a channel studied privately (`references/`: STYLE_BIBLE.m
 - Never say the channel's name in a voice-over or description.
 
 User rules that apply:
-- No captions or labels in the video.
+- Story first, always: build or fetch assets, worlds, kits and sets according to the story — never morph the story to fit whatever scenes or worlds already exist. If a beat needs a place that does not exist yet, that place gets designed or fetched; reusing the street set for it is a failure, not a shortcut.
+- Captions ship in every video (Hormozi style, step 10) unless the user opts out. No other labels.
 - English only.
-- Voice: one steady tone.
+- Voice: locked Turbo-male expressive style (step 3), all videos.
 - Jokes are researched real facts.
 - Standard mix: music +3 dB, SFX -6 dB, voice unchanged.
-- Final export 2K vertical: 1440x2560, `--scale 1.3333`.
+- Final export 2K vertical: 1440x2560, `--scale 1.3333333333333333` (full precision: 1.3333 yields
+  fractional pixels and Remotion 4 rejects it; the long form multiplies to exactly 1440x2560).
 - Opus max verifies every check.
 - Save after every step.
 - "Just do it" once the script is approved.
@@ -39,13 +41,50 @@ User rules that apply:
    - **Consequence:** the rule it created.
    - **Callback twist:** the ending.
    - Never describe on screen what the viewer already sees.
-3. **Voice.** Record or generate `voice.wav`, then make its word timings `words.json` (any speech-to-text with word times).
-   - Put them in the project folder, e.g. `~/bridge-short/voice/`.
-   - Hand-fix the word timings. Everything is timed to words.json.
-4. **Shot plan** in `story.ts`: copy `templates/bridge/` (the final bridge source, same as `src/videos/bridge/` of your Remotion project) to `src/videos/<name>/`, register a new composition next to `BridgeShort` in `src/Root.tsx`, and rename it.
+3. **Voice.** `SKILL` = the folder this SKILL.md is in. Once per computer: `bash SKILL/templates/voice/setup_voice.sh`
+   until it prints **Voice setup OK** (private env `~/.cartoon-3d-short/venv`; Kokoro voice ~340 MB, Whisper small.en
+   ~0.5 GB, all local and free; narration runs on the NVIDIA GPU when present, else CPU). The standard narration for
+   every video is the locked Turbo-male expressive style (set 2026-11-14 from the cobra voice tests): Chatterbox Turbo
+   cloning a Kokoro `bm_george` reference, one CUT per line, `exaggeration=0.6, cfg_weight=0.5, temperature=0.8,
+   norm_loudness=False` (`True` upcasts the ref to float64 and crashes in stft); assembly `lead 0.2 / gap 0.25 /
+   outro 0.3`, peak 0.9; emphasis shaping: `!` on the hook + stakes lines, em-dash pause in the hook. The reference
+   clip is the full script rendered first with `bm_george` x1.15 (doubles as the timing draft). Chatterbox needs a
+   torch-CUDA env with `chatterbox-tts` (torchaudio build must match torch's CUDA, e.g. the cu128 index; read/write
+   audio with scipy, not torchaudio, unless torchcodec is installed). Before anything is timed to the narration, the
+   pronunciation gate must PASS:
+   `SKILL/templates/voice/py SKILL/templates/voice/pron_check.py <project>/voice_work/`
+   (Whisper transcribes, every script word is aligned; number phrases, hyphen splits and HOMO homophones compare
+   canonically). Fix ladder for flags, cheapest first: `speak.json` respelling (`clerks`->`clurks`), comma/period to
+   force a boundary, re-render ONLY the flagged lines, chunk-split one display line into two TTS takes for swallowed
+   words (display/captions unchanged); Whisper's own misspellings go in `allowlist.json`. `--dump FROM TO` prints raw
+   heard tokens for diagnosis.
+   Output: `voice.wav` (48 kHz mono), `words.json` (`[{w,s,e}]`), `words.txt` + `lines.json` for checking.
+   - No Chatterbox on this machine: fall back to `render_narration.py lines.txt <project>/voice/ --dur 67.5 --speed 1.15`
+     (Kokoro `bm_george` x1.15, the pace standard); the pron gate still applies.
+   - Own recording instead: same fallback command with `--audio their.m4a` (Whisper rebuilds the timings from it).
+   - No voice yet: `--estimate` previews the timing (stdlib only; re-run without it when the voice exists).
+   - Hand-fix the word timings against words.txt. Everything is timed to words.json.
+4. **Shot plan** in `story.ts`: copy `templates/bridge/` (the final bridge source, same as `src/videos/bridge/` of your Remotion project) to `src/videos/<name>/`, register a new composition next to `BridgeShort` in `src/Root.tsx`, and rename it
+   (component, `*_FRAMES` const, delayRender label). New story, new world: rewrite `story.ts` fully (shots/cameras/DOF),
+   replace `buildTown`'s layout, rewrite `cast.ts` roles (keep its Pool/Actor/Fx/person/blob machinery), and strip
+   `world.ts` to sky/lights/clouds/smoke/cast-loop plus your props. Shot-specific props (anything that must appear or
+   vanish mid-film) live as world.ts groups with per-shot visibility — never in the merged static batch.
+   - Tag every shot INT or EXT at plan time, from the story facts, before building anything. The slugline test: if the
+     real action happened IN something (a courtroom, a shed, a lab, a vehicle — under a roof), it is INT, full stop.
+     Further INT triggers: the beat needs furniture that only makes sense inside (a judge's bench); secrecy or privacy
+     is story-relevant (scheming, cover-ups); the "sidewalk absurdity" test fails (a judge's bench on the pavement is
+     absurd — that feeling is the signal). Never downgrade INT action to a street board because the street set exists.
+   - INT action is staged dollhouse style (the user-locked house style): open-faced room boxes — floor + back wall +
+     two side walls, no front wall, no ceiling — with the EXT camera outside looking in (this is exactly the film
+     convention: scene inside + camera outside still shoots as exterior coverage). Build one room per INT location as
+     a per-shot-visible world.ts group on a separate stage apron away from the town (never embedded in a house row),
+     so sight-lines, the culler and roofs can never interfere. Sunlight rakes in through the open face as usual; add a
+     warm practical only for evening interiors. Camera grammar is unchanged (the lens never enters the room); INT/EXT
+     changes are always hard cuts. Verify in stills: open face toward the lens, no roof or ceiling in frame, back wall
+     dressed (never a bare flat plane).
    - `SHOTS`: id, a/b frames, light day/golden, crowd mode, `tau` story time.
    - `XFADE`: crossfades at place/time changes.
-   - `FLASH_AT`: a white flash after the hook.
+   - `FLASH_AT`: a white flash after the hook; later impacts get a `FLASH2` map (frame -> frames).
    - `CAMS`: per-shot keys `{f, dur?, cut?, s: f => {pos, look, fov, roll}}`.
    - `KICKS`: impact flip-shakes.
    - `DOF`/`dofAt`: lens blur per beat.
@@ -67,17 +106,44 @@ User rules that apply:
 8. **Sound** (`~/bridge-short/audio/`: timeline.py, sfx_gen.py, sfx.py, music.py, instruments.py, dsp.py, mix.py).
    - Event table → synthesized SFX plus an original score ducked under the voice.
    - Output: mix.wav (48 kHz, exact length), stems and cues.md.
+   - New story, new score: reuse `dsp.py` / `instruments.py` / `sfx_gen.py` and the render/mix machinery as-is;
+     recompose `timeline.py` (picture mirror), `music.py` build + SECTIONS, `sfx.py` cues, and the mix's MUSIC_TARGET.
+   - The SFX stem scales to the voice (`v_ref`): any new voice invalidates the cached SFX stem — delete and re-render it.
    - Lock the picture's time constants before the sound is made. Any later timing change means re-running the sound.
 9. **Look checks.** Run `node scripts/bridge-stills.mjs out/<name>/x_ 100,400 0.5`.
    - Set `BRIDGE_ENTRY=src/sandboxes/<n>/index.tsx` to render a sandbox copy.
    - Make side-by-sides against reference frames with `python scripts/sbs_sheet.py out.jpg --ours ... --ref ...`.
    - Send them to an Opus max verifier: 1-3 images, a ≤200-word verdict.
-10. **Final render.**
-    - `npx remotion render src/index.ts <Comp> out/<name>/video.mp4 --codec h264 --crf 16 --scale 1.3333`
+   - Placement/passthrough audit (separate pass after the look is right; pixel QA cannot see a head inside a
+     pot wall): for every DYNAMIC object list what it can touch (lids vs heads, pots vs necks, feet vs ground,
+     stacked bodies) and every STATIC group vs the set (nothing buried in walls: the shed swallowed half the
+     cobra yard); check ground contact (resting y >= surface), container containment (contents inside while
+     lids shut; grow/rise choreography must clear rims, verified frame by frame), and motion bounds (sway/crawl
+     amplitudes keep clearances); prove each contact with a targeted still on the exact frames (lid lift, slam,
+     tip) and re-verify after every fix. The burial check covers CAST too: an actor placed inside architecture
+     (v1 molasses parked its S3 worker inside the tank cylinder) is silently swallowed by the wall — prove every
+     credited actor visible in at least one still, never by coordinates alone.
+10. **Captions (in every video).** Hormozi style, from `templates/captions.tsx` + the voice's `words.json`
+    (single source of truth): Montserrat ExtraBold, ALL CAPS, white with a thick black outline
+    (`WebkitTextStroke` ~11% of font size, `paintOrder: "stroke fill"`); each page pops in as a unit (5-7 words at
+    Kokoro pace, fewer at slower Turbo pace — longer words per window, cap 5 not 6)
+    (page-level spring, hard cuts); only the yellow (`#FFEA00`) highlight travels with the narration — never
+    animate words in one by one (rejected as too distracting). Bottom-center (`paddingBottom` 330, `maxWidth` 980
+    at the 1080x1920 design size). Needs `@remotion/captions` (same version as remotion) and
+    `public/fonts/Montserrat-ExtraBold.woff2` (Google Fonts latin subset); the component holds a delayRender
+    handle until the FontFace loads, else frames render in a fallback font. Never more than two lines: page by
+    ~1.7 s windows (`combineTokensWithinMilliseconds: 1700`, silence breaks, hard cap 6 balanced tokens so no
+    chunk strands an orphan word) and prove the cap by measuring EVERY page with the real woff2 over every
+    active-word case, including stroke bleed into the gaps — not by eyeballing stills.
+11. **Final render (GPU).**
+    - `npx remotion render src/index.ts <Comp> out/<name>/video.mp4 --codec h264 --crf 16 --scale 1.3333333333333333 --gl=vulkan --concurrency=2 --timeout=180000`
+    - `--gl=vulkan` = NVIDIA (ANGLE-on-Vulkan), `--gl=angle-egl` = Intel iGPU. `--gl=egl` can NOT make a WebGL context: never use it.
+    - Concurrency ceiling on a 6 GB card: 2 is fastest RELIABLE; 4+ loses GL contexts (blank frames), 8+ renders all white. Verify any new value with a flat-frame scan before trusting it.
+    - Keep `--crf 16` libx264 (NVENC forbids CRF; encode runs concurrently and is never the bottleneck).
     - Mux with `-map 0:v:0 -map 1:a:0` (Remotion writes a silent audio track).
     - QA: `python scripts/short_qa.py final.mp4 out/<name>/qa shots.json` checks every frame for black, white, frozen and pop frames, plus loudness and sheets.
     - Fix anything it finds, then run a deep Opus audit.
-11. **Deliver.** SendUserFile the final mp4, update memory, write notes.
+12. **Deliver.** SendUserFile the final mp4, update memory, write notes.
 
 ## Final look values (bridge after 4 verifier rounds; all in `templates/bridge/`)
 Start every new short from `templates/bridge/` (copy to `src/videos/<name>/`): the look lives in these values, the
@@ -94,7 +160,10 @@ lighting 5-6, ink 6, textures 5-6, characters 7, depth 6-7, composition 6-7 (fro
 - **Ink** (`ink.ts`): #030303, 5.1 px near (6 m) → 3.3 px far (90 m) at 1080x1920, creases ×0.8 from 35°, depth
   jumps from 1 %, fog tint 0.3 only far; character cards on layer `NOINK` (they carry their own plum ink).
 - **Lens** (`lensblur.ts` + `dofAt` in story.ts): cInf px at 1080: hook/river CU 15-16, close-ups 12-14, MS 10-12,
-  park 7, golden sway 5, wides/aerials 0. Focus on the eyes of the front row.
+  park 7, golden sway 5, wides/aerials 0. Focus on the eyes of the front row — ALWAYS the cast, never the set:
+  v2 molasses shipped six shots of soft characters because the table focused look points and tank walls while the
+  cast stood off-plane. Gate: `npm run focus-audit` (predicted CoC per credited face, ≤5px) must pass before the
+  final render, and face sharpness is then confirmed on full-resolution crops, never on 540px stills.
 - **Post** (`Bridge.tsx`): ink → lens pre → lens main → bloom (thr 1.0, int .5, 6 levels, radius .6) → NEUTRAL tone
   map → grade; MSAA 4. Film grain exists but is OFF (reference measures no grain; it quadruples the file size).
 - **Characters** (`toon.ts`/`cast.ts`/`cardshade.ts`): bean heads h/w .94, plum ink #241726, eyes .26 W apart, no blush,
@@ -144,6 +213,33 @@ lighting 5-6, ink 6, textures 5-6, characters 7, depth 6-7, composition 6-7 (fro
 - Kenney nature-kit materials are teal: recolour them by material name in build.ts.
 - Cameras end up inside houses: the sight-line culler in build.ts/world.ts removes anything blocking any camera ray.
 - Ink in the same merged effect pass as DOF gets overwritten. Ink must be its own pass before the blur.
+- Never put `dispose={null}` on a `<primitive>`: R3F assigns it onto the instance, shadowing its real `dispose()`
+  (crossfade unmounts then crash with "dispose is not a function"). Primitives are never auto-disposed anyway.
+- Where a prop and an actor must meet (straws to mouths, dots over a bucket), share the anchor points as constants
+  in `story.ts` that both `world.ts` and `cast.ts` import — never duplicate coordinates.
+- Effect cards pasted on geometry (a map on a board) need a world-locked yaw: camera billboards visibly float off
+  the surface at oblique angles. Free-floating effects stay billboards.
+- A long camera glide goes straight: if it would thread geometry, split it with a waypoint key that swings wide.
+- The sight-line culler only removes houses sitting in front of sampled camera rays: it can NOT save a glide path that threads the El trestle (never culled), crosses a house row laterally (row is behind the ray starts), or dollies into a column (the S3b end point sat 0.27 m inside an El column and filled the frame with a navy blob). Route crane/glide paths OVER trestles and rows (y above the tallest roof) and still-verify the glide every ~10 f, not just its endpoints.
+- For head-on approach choreography (camera and object rushing each other), compute the closest-approach distance and still-verify the frames around it: a front face crossing the 0.2 m near plane winks the whole object out for the rest of the shot (the S8 wave vanished at f1181 and only the frame-QA pop caught it). Retreat the lens instead of pushing in.
+- Occlusion checks must cover horizontal structures, not just vertical ones: the v2 S3 witness hid behind the El track bed (a continuous plane) through four placements while every check looked at columns. Trace each hero sightline against decks, beams, rails and roofs explicitly — or keep the lens on the same side as its subject.
+- The sight-line culler only guards ±0.6 of the frame: props at the frame edge survive it, so check every sheet for
+  edge giants and cut-off blobs.
+- faster-whisper CUDA fails at transcribe time (missing `libcublas.so.12`), not at model load: `words.py` retries on
+  CPU there too. The setup check transcribes real audio so it proves the working path, not just the import.
+- QA "pops" flag planned impacts as well as glitches: account every one against the shot plan (kick, burst, hard cut,
+  fast glide) before touching anything.
+- Fit the voice to the picture beats (a line must clear its flash/cut) by iterating `--speed`/`--lead`/`--gap` and
+  re-reading `lines.json`, not by editing audio. Punctuation-only tokens (em-dashes) drop from `words.json`: harmless.
+- Caption pages pop whole strips of pixels at once: in low-motion shots the QA pop detector flags them. Fold every
+  page-start frame (±1) into `shots.json` "planned" so the gate only fires on real picture glitches.
+- When a placed actor seems missing from a still, check caption-strip occlusion FIRST (bottom-centre placements hide behind the text) before re-deriving positions: v2 molasses chased an "invisible" witness through three placements when he was behind the caption all along. A quick NDC projection script beats mental arithmetic for framing questions.
+- The token cap alone does NOT stop orphans (window boundaries strand "A"/"AND" at page ends): run the orphan cascade
+  (trailing glue moves to the next page; sentence-final glue and sub-300 ms remnants stay) plus manual splits for audit
+  failures, and gate on `scripts/caption_audit.py` (every page ≤2 lines by real-woff2 advances + stroke bleed, zero
+  orphans) before the final render.
+- An active-word scale-up eats its neighbours' gaps (transform overflow + stroke bleed); size the gap from measured
+  worst-case pixels or keep the highlight colour-only. Trim token text: flex boxes drop leading spaces silently.
 - Pixel-sized post parameters must scale with resolution: stills are at 0.5, the final at 1.333. R3F clamps dpr to ≥ 1, so `--scale 0.5` stills still render a 1080x1920 buffer.
 - **Disk:** every Remotion bundle copies `public/` (~1.3 GB) into `the temp folder\remotion-webpack-bundle-*` and never deletes it. 60+ GB filled the system drive during the bridge passes and a render died with ENOSPC. Always render with `export TEMP='<big drive>/remotion-tmp' TMP='<big drive>/remotion-tmp'` (bridge-stills.mjs sets it itself) and ask the user before deleting old bundle folders in the shared the temp folder (auto mode blocks the sweep). <big drive>/remotion-tmp fills too (~500 folders / 110 GB after the 4 bridge rounds): when a project is finished and nothing is rendering, delete its `remotion-webpack-bundle-*` and `puppeteer_dev_chrome_profile-*` folders there.
 - In JS strings write `"<big drive>/remotion-tmp"`, never `"<big drive>\remotion-tmp"` (`\r` becomes a carriage return).
@@ -152,6 +248,21 @@ lighting 5-6, ink 6, textures 5-6, characters 7, depth 6-7, composition 6-7 (fro
 - Scratch `.ts` files inside `out/` break `tsc`: name them `.txt`.
 - 2K renders run ~4 fps (≈10 min for 67 s). Stills at 0.5 take 3-8 s each after a ~40 s bundle.
 - Film grain at 2.5 % made the 2K file 910 MB instead of ~250 MB and will turn to mush on YouTube; the reference has none. Keep it off.
+- Shot-specific furniture must hide outside its shots (per-shot visibility groups): a static payout table reads as a random table in every wide it wanders into. Every visible prop must earn its frame.
+- Ground/apron quads: stagger depths (street 0.012, aprons 0.02+): coplanar overlaps z-fight into color flicker.
+- Every fx card must be tied to a timed event (word/beat): a continuous twinkle reads as random floating junk.
+- Symmetric-looking props have a front: verify facing (eyes/hood marks toward the lens) in a still, never by coordinates. Hand-computed screen positions are sign-error-prone: verify all framing empirically, always.
+- A character closer than ~6 m to the lens gets decapitated by the caption strip and reads as a mystery brown blob (the S6 "dome" was a watcher's hair with face and torso hidden): keep background cast 8+ m from the lens path, and suspect a too-close actor first whenever a still grows an unplaceable blob.
+- Props parented to a mesh must protrude past its surface, and effect cards must sit in open air: the wave debris shipped buried inside the extrusion (invisible 3 rounds), the S9 dust shipped inside the ruined house (depth-hidden). Place burst/dust cards OUTSIDE the geometry toward open space (offsets along the face normal, verified against the wall radius), never at the object centre.
+- Verify every fx with bracketed stills (3+ frames across its life), never one frame: a lone still once showed a firing dust trigger as missing (a one-off GPU flake), and fxBurst/fxRing keep full ink past u = 0.5, so a single sample proves nothing either way.
+- Animated emergence through containers: grow-then-rise (scale in before moving) so heads never cross walls/lids; verify the contact frames.
+- An SFX cue exists only once measured: after mixing, check each SFX family's band energy in its windows vs control windows (a -26 LU hiss hid ~20 dB under the ambience until measured). Hisses sit ~-7.5 LU: above the music, below the narration.
+- Any cue/level/generator change invalidates the cached SFX stem: delete `_cache/<name>_sfx.npy` and re-render (a stale cache once shipped old audio; a wrong-path `rm` silently did nothing).
+- Chatterbox Turbo exaggeration defaults to 0.0 (flat delivery); the locked 0.6 does real work. Turbo without a reference clip gives an arbitrary (female) voice: always clone.
+- Out-of-frame objects cast in-frame shadows: check shadow casters outside close-ups (a flag pole shadowed the chest).
+- Dead cartoon reads: X eyes + lolling tongue + grey body. Oversize the X (6 cm reads at 3 m, 3 cm doesn't).
+- Chatterbox adapter: per-line wavs + `narration.wav` + `lines.json` + `script.json` in `voice_work/` so `words.py` runs unchanged; pron fixes re-render single lines.
+- Record every bug found in verification in this list the same turn (cause + fix): the next video must avoid it from the start.
 
 ## Readability traps the verifier caught (check every new prop/shot for these)
 - **A swing drawn as one rope that disappears behind the kid reads as a HANGING.** Always two ropes to a wide plank

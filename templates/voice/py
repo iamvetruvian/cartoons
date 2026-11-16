@@ -1,0 +1,13 @@
+#!/bin/bash
+# Runs Python from the cartoon skill's private voice environment (~/.cartoon-3d-short/venv),
+# or the system python3 before setup_voice.sh has run. Also exposes the venv's NVIDIA libs
+# (cuBLAS for faster-whisper) and pins Kokoro to CUDA (skips its TensorRT retry) on NVIDIA machines.
+FH="${CARTOON_SHORTS_HOME:-$HOME/.cartoon-3d-short}"
+for d in "$FH"/venv/lib/python*/site-packages/nvidia/*/lib; do
+  [ -d "$d" ] && LD_LIBRARY_PATH="$d${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+done
+[ -n "${LD_LIBRARY_PATH:-}" ] && export LD_LIBRARY_PATH
+if command -v nvidia-smi >/dev/null && nvidia-smi -L >/dev/null 2>&1; then export ONNX_PROVIDER=CUDAExecutionProvider; fi
+for p in "$FH/venv/bin/python" "$FH/venv/Scripts/python.exe"; do [ -x "$p" ] && exec "$p" "$@"; done
+command -v python3 >/dev/null && python3 -c "" 2>/dev/null && exec python3 "$@"
+exec python "$@"   # Windows (Git Bash)
