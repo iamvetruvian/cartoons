@@ -10,19 +10,33 @@ import { Pen, fxSign } from "./toon";
 import { LIGHTS, LOOK, LightPreset } from "./lights";
 import { TONE, CHAR, LFB, twoTone, untone } from "./shade";
 import { NOINK } from "./ink";
-import { Pool, Actor, Fx, stage, snapFx, splashFx, creakFx, SIGN_AT, SU_SWING } from "./cast";
+import { Pool, Actor, Fx, stage, snapFx, splashFx, creakFx, SIGN_AT, SU_SWING, poolReport } from "./cast";
 import { FPS, D0, SHOTS, PARK, ANCHOR, SNAP, camAt, bridgeState, deckY, dropW, shapeZ, snapEnd, front, BridgeState, V3, smooth, FOREGROUND, ShotDef } from "./story";
 
 // ---------------- assets ----------------
-const KENNEY = ["tree_oak", "tree_default", "tree_detailed", "tree_fat", "tree_cone", "tree-high-round", "tree", "plant_bushLarge", "plant_bushDetailed",
-  "plant_bush", "hedge", "flower_redA", "flower_yellowA", "flower_purpleA", "grass_large", "grass", "lily_large", "lantern", "cart", "stall-red",
-  "stall-green", "stall-bench", "banner-red", "banner-green", "windmill", "canoe"];
+// Models actually rendered from GLB. The 11 VEG names (trees/bushes/hedge) are drawn
+// procedurally by build.ts prop()/kitClone() and must NOT be listed here: loading them
+// wastes requests, and (now that failures are loud) would spam false alarms in new
+// videos that only fetched what they render. Banners stay: kitClone can use them.
+const KENNEY = ["flower_redA", "flower_yellowA", "flower_purpleA", "grass_large", "grass", "lily_large",
+  "lantern", "cart", "stall-red", "stall-green", "stall-bench", "banner-red", "banner-green", "windmill", "canoe"];
+/** names that failed to load this session (missing/corrupt files) — for audits */
+export const KIT_MISSING: string[] = [];
 let kitP: Promise<Kit> | null = null;
-export const loadKit = () => {
+/** base = public/<video>/ subdir holding the GLBs (per-video dirs, see ASSETS.md).
+ *  Params apply to the first call only (the promise is cached). Failures are loud:
+ *  one console.error per missing file (surfaced by bridge-stills) plus KIT_MISSING. */
+export const loadKit = (names: string[] = KENNEY, base = "bridge/kenney") => {
   if (!kitP) {
     const loader = new GLTFLoader();
-    kitP = Promise.all(KENNEY.map((n) => loader.loadAsync(staticFile(`bridge/kenney/${n}.glb`)).then((g) => [n, g.scene] as const).catch(() => [n, null] as const)))
-      .then((list) => Object.fromEntries(list.filter((e) => e[1]).map(([n, s]) => [n, s!])) as Kit);
+    kitP = Promise.all(names.map((n) => {
+      const url = staticFile(`${base}/${n}.glb`);
+      return loader.loadAsync(url).then((g) => [n, g.scene] as const).catch((err) => {
+        console.error(`[kit] MISSING ${url} — prop "${n}" renders as NOTHING. Fetch it (ASSETS.md) or fix the name.`, err);
+        if (!KIT_MISSING.includes(n)) KIT_MISSING.push(n);
+        return [n, null] as const;
+      });
+    })).then((list) => Object.fromEntries(list.filter((e) => e[1]).map(([n, s]) => [n, s!])) as Kit);
   }
   return kitP;
 };
@@ -86,6 +100,8 @@ const sightLines = (): Ray[] => {
 };
 
 type Mats = Record<string, THREE.Material>;
+/** flip the false to true to log PERF_JSON per frame for perf_budget.py (or DUMP_PERF=1 if env reaches the bundle) */
+const PERF_DUMP = false || (globalThis as any).process?.env?.DUMP_PERF === "1";
 
 export class World {
   root = new THREE.Group();
@@ -453,6 +469,7 @@ export class World {
     }
     for (let i = fi; i < this.fxs.length; i++) this.fxs[i].mesh.visible = false;
     this.pool.flush();
+    if (PERF_DUMP) console.log(`PERF_JSON ${JSON.stringify({ id, f, ...poolReport() })}`);
     for (const a of used) a.bind();
     for (const e of fused) e.bind();
     return focus;

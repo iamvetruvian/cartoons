@@ -10,9 +10,14 @@ Proven on **The Bridge That Fell for a Song**, a 67 s short about the 1831 Broug
 | Path | What it is |
 |---|---|
 | `SKILL.md` | The skill: the full pipeline, every rule, every fix, and the final look values |
-| `templates/bridge/` | The full source of the bridge short: world, characters, ink, lens blur, grade, story/camera |
+| `STAGING.md` | Scene-brief gate: meaning-not-words, diverge-then-select, 10 staging patterns, blockout previs |
+| `ACTING.md` | Parametric faces, emotion timelines, body acting, texture-cache budget |
+| `CHARACTER_DESIGN.md` | Character briefs + silhouette gate (turnaround + expression sheets) |
+| `ASSETS.md` | Fetch-first props: per-source guides (Kenney, Poly Pizza), 2 accept gates, permanent local cache |
+| `LOOK.md` | House look values, look targets, look-match loop, post landmines |
+| `templates/bridge/` | The full source of the bridge short: world, characters, face rig, relational placement, ink, lens blur, grade, story/camera |
 | `templates/audio/` | The synthesized sound: SFX, march music, the mix with ducking and loudness |
-| `templates/scripts/` | Stills, side-by-side sheets, shot merge and frame-by-frame QA helpers |
+| `templates/scripts/` | Stills, side-by-side sheets, shot merge, frame QA, and all pre-render gates (laziness, geometry, camera, framing, fx, perf, materials, silhouette, ledger, kit) + asset fetching |
 | `templates/voice/` | Narration: local Kokoro TTS + Whisper word timings in 10 voices, setup + render scripts |
 | `templates/captions.tsx` | Hormozi captions (in every video unless opted out): page pop + traveling yellow highlight from words.json, max two lines |
 | `references/STYLE_BIBLE.md` | The script and visual formula measured from 20 reference shorts |

@@ -1,0 +1,18 @@
+{
+ "words": "voice/words.json",
+ "fps": 30,
+ "fx": [
+  {
+   "shot": 8,
+   "frame": 1039,
+   "kind": "burst",
+   "word": "snap",
+   "dur": 14,
+   "stills": [
+    "out/demo/fx/snap_1037.jpg",
+    "out/demo/fx/snap_1039.jpg",
+    "out/demo/fx/snap_1042.jpg"
+   ]
+  }
+ ]
+}

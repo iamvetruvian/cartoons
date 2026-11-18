@@ -26,6 +26,9 @@ const makeEntry = (w: number, h: number): Entry => {
   tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
   return { cv, tex, w, h };
 };
+/** canvas-pool telemetry for perf_budget.py: live canvases + high-water + bytes (RGBA8) */
+export const PERF = { live: 0, highWater: 0, bytes: 0 };
+export const poolReport = () => ({ ...PERF });
 export class Pool {
   private live = new Map<string, Entry>();
   private free: Entry[] = [];
@@ -52,6 +55,11 @@ export class Pool {
       }
       for (const r of rs) r.tex = e.tex;
     }
+    PERF.live = this.live.size;
+    if (this.live.size > PERF.highWater) PERF.highWater = this.live.size;
+    let bytes = 0;
+    for (const e of this.live.values()) bytes += e.w * e.h * 4;
+    PERF.bytes = bytes;
     this.reqs = [];
   }
 }

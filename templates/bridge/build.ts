@@ -33,6 +33,9 @@ const lamOf = new Map<string, THREE.MeshLambertMaterial>();
 const GREENS = ["#62ae4c", "#56a447", "#72b853"];
 const RECOLOR: Record<string, string> = { grass: "#6aab4f", leafsDark: "#4a9142", woodBark: "#8a5a3c", woodInner: "#e8cfa4", wood: "#a8724a",
   woodDark: "#7a4f33", dirt: "#8a6a4a", stone: "#b7b4ad" };
+/** GLB material names deliberately kept at source colors (material_check.py fails any other unmapped name):
+ *  flower petals, the fantasy-town texture atlas, the canoe accent, tree_detailed's spare (VEG-unused) */
+export const MATERIAL_ALLOW = ["colorRed", "colorYellow", "colorPurple", "colormap", "leafsFall", "_defaultMat"];
 /** Kenney GLB materials -> Lambert, so the whole world shares one lighting model */
 const toLambert = (m: THREE.Material) => {
   let l = lamOf.get(m.uuid);
@@ -423,6 +426,16 @@ const bannerProp = (b: Batch, name: string, x0: number, y: number, z0: number, h
 
 // ---------------- Kenney props ----------------
 const boxes = new Map<THREE.Object3D, THREE.Box3>();
+const warnedMissing = new Set<string>();
+/** requested model absent from the kit (typo, or never fetched): loud once per name, never silent */
+const missingProp = (name: string, at?: [number, number, number]) => {
+  if (warnedMissing.has(name)) return;
+  warnedMissing.add(name);
+  const where = at ? ` at (${at[0].toFixed(1)}, ${at[1].toFixed(1)}, ${at[2].toFixed(1)})` : "";
+  console.error(`[kit] MISSING prop "${name}"${where} — renders as NOTHING. Add it to KENNEY + fetch it (ASSETS.md), or fix the typo.`);
+};
+/** names requested but absent this session — for audits */
+export const propMissing = () => [...warnedMissing];
 /** place a Kenney model with its base on y, scaled to height h (left out when it would stand in front of the lens).
  *  Trees, bushes and hedges are drawn as cartoon vegetation, banners as painted cloth instead (MAT pass). */
 export const prop = (b: Batch, kit: Kit, name: string, x: number, y: number, z: number, h: number, yaw = 0) => {
@@ -436,7 +449,7 @@ export const prop = (b: Batch, kit: Kit, name: string, x: number, y: number, z: 
     return;
   }
   const o = kit[name];
-  if (!o) return;
+  if (!o) { missingProp(name, [x, y, z]); return; }
   let box = boxes.get(o);
   if (!box) { box = new THREE.Box3().setFromObject(o); boxes.set(o, box); }
   const s = h / Math.max(0.01, box.max.y - box.min.y), r = Math.max(box.max.x - box.min.x, box.max.z - box.min.z) * s * 0.5;
@@ -456,7 +469,7 @@ export const kitClone = (kit: Kit, name: string, h: number): THREE.Object3D | nu
     return grp;
   }
   const o = kit[name];
-  if (!o) return null;
+  if (!o) { missingProp(name); return null; }
   let box = boxes.get(o);
   if (!box) { box = new THREE.Box3().setFromObject(o); boxes.set(o, box); }
   const c = o.clone(true), s = h / Math.max(0.01, box.max.y - box.min.y);
